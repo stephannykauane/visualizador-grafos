@@ -24,7 +24,6 @@ def _build_info_box(info, algo_name=None, step=None, total=None):
 
 
 def _apply_algo_classes(elements, current_step):
-
     if not current_step:
         return elements
     current = current_step.get("current")
@@ -37,7 +36,7 @@ def _apply_algo_classes(elements, current_step):
         target = el.get("data", {}).get("target")
 
         if source is None:
-         
+            #
             if el_id == current:
                 el["classes"] = "algo-current"
             elif el_id in visited:
@@ -45,21 +44,18 @@ def _apply_algo_classes(elements, current_step):
             elif el_id in queued:
                 el["classes"] = "algo-queued"
             else:
-                
                 existing = el.get("classes", "")
-          
                 classes = " ".join(
                     c for c in existing.split() if c in ("selected-node", "selected-edge")
                 )
                 el["classes"] = classes
         else:
-          
+         
             if source == current and target in visited:
                 el["classes"] = "algo-edge-active"
             elif target == current and source in visited:
                 el["classes"] = "algo-edge-active"
             else:
-               
                 existing = el.get("classes", "")
                 classes = " ".join(
                     c for c in existing.split() if c in ("selected-node", "selected-edge")
@@ -69,10 +65,8 @@ def _apply_algo_classes(elements, current_step):
 
 
 def _clear_all_algo_classes(elements):
- 
     for el in elements:
         existing = el.get("classes", "")
-  
         classes = " ".join(
             c for c in existing.split() if c in ("selected-node", "selected-edge")
         )
@@ -81,11 +75,9 @@ def _clear_all_algo_classes(elements):
 
 
 def _export_graph():
-  
     info = graph_service.get_info()
     lines = [f"{info['nodes']} {info['edges']}"]
     
- 
     for u, v, data in graph_service.graph.edges(data=True):
         w = data.get("weight", 1)
         if info["weighted"]:
@@ -97,9 +89,7 @@ def _export_graph():
 
 
 def _import_graph(content, directed, weighted):
-    
     try:
-  
         if ',' in content:
             content_type, content_string = content.split(',')
             decoded = base64.b64decode(content_string).decode('utf-8')
@@ -110,7 +100,6 @@ def _import_graph(content, directed, weighted):
         if not lines:
             return False
         
-
         first_line = lines[0].split()
         if len(first_line) != 2:
             return False
@@ -120,12 +109,11 @@ def _import_graph(content, directed, weighted):
         graph_service.clear_graph()
         graph_service.set_type(directed == "directed", weighted == "weighted")
         
-       
         import random
         nodes_created = []
         for i in range(n_nodes):
             if i < 26:
-                node_id = chr(65 + i)  
+                node_id = chr(65 + i)
             else:
                 node_id = f"N{i}"
             pos_x = random.randint(100, 800)
@@ -133,7 +121,6 @@ def _import_graph(content, directed, weighted):
             graph_service.add_node(pos_x, pos_y, node_id)
             nodes_created.append(node_id)
         
-
         for i in range(1, len(lines)):
             line = lines[i]
             if not line:
@@ -152,7 +139,6 @@ def _import_graph(content, directed, weighted):
 
 
 def register_callbacks(app):
-
     @app.callback(
         Output("graph", "elements"),
         Output("graph", "stylesheet"),
@@ -169,6 +155,8 @@ def register_callbacks(app):
         Output("run-dfs", "className"),
         Output("graph-direction", "className"),
         Output("graph-weight", "className"),
+        Output("next-step", "disabled"),
+        Output("run-all", "disabled"),
 
         Input("add-node", "n_clicks"),
         Input("hidden-add-node", "n_clicks"),
@@ -222,6 +210,8 @@ def register_callbacks(app):
         dfs_class = "btn-algo"
         direction_class = "radio-group"
         weight_class = "radio-group"
+        next_step_disabled = False
+        run_all_disabled = False
 
         zoom = zoom if isinstance(zoom, (int, float)) else 1
         pan = pan if isinstance(pan, dict) else {"x": 0, "y": 0}
@@ -235,17 +225,17 @@ def register_callbacks(app):
             except Exception:
                 pass
 
-
         show_completion_message = False
         completed_algo_name = None
         force_clear_classes = False
+        is_completion_step = False
 
-     
+        
         if "download-btn" in trigger:
             content = _export_graph()
             download_data = dict(content=content, filename="graph.txt")
 
-     
+ 
         elif "upload" in trigger and upload_content:
             if _import_graph(upload_content, direction, weight):
                 state["algo_steps"] = []
@@ -256,7 +246,7 @@ def register_callbacks(app):
                 state["running_algo"] = None
                 force_clear_classes = True
 
-       
+   
         elif "add-node" in trigger or "hidden-add-node" in trigger:
             pos = state["last_position"]
             graph_service.add_node(pos["x"], pos["y"])
@@ -266,7 +256,7 @@ def register_callbacks(app):
             state["running_algo"] = None
             force_clear_classes = True
 
-      
+   
         elif "btn-clear" in trigger:
             graph_service.clear_graph()
             state["selected_node"] = None
@@ -277,21 +267,20 @@ def register_callbacks(app):
             state["running_algo"] = None
             force_clear_classes = True
 
-    
+       
         elif "add-edge" in trigger:
             if edge_source and edge_target:
                 graph_service.add_edge(
                     edge_source.strip().upper(),
                     edge_target.strip().upper(),
-                    1 
+                    1
                 )
                 force_clear_classes = True
 
-      
+        
         elif "graph.tapNodeData" in trigger and tap_node:
             node_id = tap_node["id"]
             if state["selected_node"] is None:
-               
                 state["selected_edge"] = None
                 state["selected_node"] = node_id
             else:
@@ -299,23 +288,21 @@ def register_callbacks(app):
                     graph_service.add_edge(
                         state["selected_node"], node_id, 1
                     )
-          
                 state["selected_node"] = None
                 force_clear_classes = True
 
+  
         elif "graph.tapEdgeData" in trigger and tap_edge:
             edge_id = tap_edge["id"]
-            
             if state["selected_edge"] == edge_id:
                 state["selected_edge"] = None
             else:
-               
                 state["selected_node"] = None
                 state["selected_edge"] = edge_id
 
+  
         elif "hidden-delete" in trigger:
             if state["selected_node"]:
-           
                 graph_service.remove_node(state["selected_node"])
                 state["selected_node"] = None
                 state["algo_steps"] = []
@@ -324,16 +311,12 @@ def register_callbacks(app):
                 state["running_algo"] = None
                 force_clear_classes = True
             elif state["selected_edge"]:
-
                 edge_id = state["selected_edge"]
-
                 parts = edge_id.split("-")
                 if len(parts) >= 3:
-          
                     u = parts[1]
                     v = "-".join(parts[2:]) if len(parts) > 3 else parts[2]
                     
-                 
                     graph_service.edges_data = [
                         (a, b, w) for (a, b, w) in graph_service.edges_data
                         if not ((a == u and b == v) or (not graph_service.directed and a == v and b == u))
@@ -342,7 +325,7 @@ def register_callbacks(app):
                 state["selected_edge"] = None
                 force_clear_classes = True
 
-   
+        
         elif "update-edge-weight" in trigger:
             if state["selected_edge"] and edit_weight is not None:
                 parts = state["selected_edge"].split("-")
@@ -350,7 +333,6 @@ def register_callbacks(app):
                     u = parts[1]
                     v = "-".join(parts[2:]) if len(parts) > 3 else parts[2]
                     
-               
                     graph_service.edges_data = [
                         (a, b, int(edit_weight)) if ((a == u and b == v) or (not graph_service.directed and a == v and b == u)) else (a, b, w)
                         for (a, b, w) in graph_service.edges_data
@@ -358,6 +340,7 @@ def register_callbacks(app):
                     graph_service._rebuild_graph()
                     force_clear_classes = True
 
+      
         elif "run-bfs" in trigger:
             if algo_start and algo_start.strip().upper() in graph_service.graph.nodes:
                 state["algo_steps"] = bfs_steps(graph_service.graph, algo_start.strip().upper())
@@ -366,6 +349,7 @@ def register_callbacks(app):
                 state["auto_running"] = False
                 bfs_class = "btn-algo btn-algo-active"
                 dfs_class = "btn-algo"
+
 
         elif "run-dfs" in trigger:
             if algo_start and algo_start.strip().upper() in graph_service.graph.nodes:
@@ -378,32 +362,39 @@ def register_callbacks(app):
 
    
         elif "next-step" in trigger:
-            if state["algo_steps"] and state["algo_index"] < len(state["algo_steps"]) - 1:
-                state["algo_index"] += 1
-
-    
-        elif "run-all" in trigger:
-            state["auto_running"] = True
-
-     
-            if state["auto_running"] and state["algo_steps"]:
+            if state["algo_steps"] and state["algo_index"] < len(state["algo_steps"]):
                 if state["algo_index"] < len(state["algo_steps"]) - 1:
                     state["algo_index"] += 1
-                else:
-                    state["auto_running"] = False
+                elif state["algo_index"] == len(state["algo_steps"]) - 1:
+                   
+                    is_completion_step = True
 
-    
-        graph_service.set_type(direction == "directed", weight == "weighted")
-        
+      
+        elif "run-all" in trigger:
+            if state["algo_steps"]:
+                state["auto_running"] = True
 
-        if "graph-direction" in trigger or "graph-weight" in trigger:
+
+       
+        elif "algo-interval" in trigger and state["auto_running"] and state["algo_steps"]:
+            if state["algo_index"] < len(state["algo_steps"]) - 1:
+                state["algo_index"] += 1
+            elif state["algo_index"] == len(state["algo_steps"]) - 1:
+              
+                is_completion_step = True
+                state["auto_running"] = False
+
+      
+        elif "graph-direction" in trigger or "graph-weight" in trigger:
             state["algo_steps"] = []
             state["algo_index"] = 0
             state["running_algo"] = None
             state["auto_running"] = False
             force_clear_classes = True
 
-      
+        graph_service.set_type(direction == "directed", weight == "weighted")
+        
+   
         elements = graph_service.get_elements()
 
    
@@ -415,31 +406,61 @@ def register_callbacks(app):
             elif is_edge and el_id == state["selected_edge"]:
                 el["classes"] = "selected-edge"
 
-       
+
         current_step = None
         algo_finished = False
-     
+        total_steps = len(state["algo_steps"])
+        
         if force_clear_classes:
             elements = _clear_all_algo_classes(elements)
-        elif state["algo_steps"]:
-            if state["algo_index"] < len(state["algo_steps"]) - 1:
+        elif state["algo_steps"] and total_steps > 0:
+            if state["algo_index"] < total_steps - 1:
                 current_step = state["algo_steps"][state["algo_index"]]
                 elements = _apply_algo_classes(elements, current_step)
-            elif state["algo_index"] == len(state["algo_steps"]) - 1:
-         
+            elif state["algo_index"] == total_steps - 1:
+   
                 current_step = state["algo_steps"][state["algo_index"]]
                 elements = _apply_algo_classes(elements, current_step)
+                
+       
+                if is_completion_step:
+                    algo_finished = True
+                    completed_algo_name = state.get("running_algo", "Algoritmo")
+   
+                    state["_pending_completion"] = True
+            elif state["algo_index"] >= total_steps:
+                
                 algo_finished = True
                 completed_algo_name = state.get("running_algo", "Algoritmo")
-    
-            else:
-              
-                algo_finished = True
-                completed_algo_name = state.get("running_algo", "Algoritmo")
-              
                 elements = _clear_all_algo_classes(elements)
 
-    
+
+        if algo_finished and state.get("_pending_completion"):
+   
+            state["algo_steps"] = []
+            state["algo_index"] = 0
+            state["running_algo"] = None
+            state["auto_running"] = False
+            state["_pending_completion"] = False
+            bfs_class = "btn-algo"
+            dfs_class = "btn-algo"
+            next_step_disabled = False
+            run_all_disabled = False
+
+            elements = _clear_all_algo_classes(elements)
+        elif not state["algo_steps"]:
+       
+            next_step_disabled = True
+            run_all_disabled = True
+        elif state["algo_index"] >= total_steps - 1:
+          
+            run_all_disabled = True
+            next_step_disabled = False
+        else:
+            next_step_disabled = False
+            run_all_disabled = False
+
+
         arrow_shape = "triangle" if direction == "directed" else "none"
         stylesheet = [
             {
@@ -541,8 +562,7 @@ def register_callbacks(app):
         ]
 
         info = graph_service.get_info()
-        total = len(state["algo_steps"])
-        step_num = state["algo_index"] + 1 if state["algo_steps"] and state["algo_index"] < total else None
+        step_num = state["algo_index"] + 1 if state["algo_steps"] and state["algo_index"] < total_steps else None
 
         show_algo_name = state.get("running_algo") if state["algo_steps"] and not algo_finished else None
         
@@ -550,12 +570,10 @@ def register_callbacks(app):
             info,
             algo_name=show_algo_name,
             step=step_num,
-            total=total if total else None
+            total=total_steps if total_steps else None
         )
 
-        
-        if algo_finished:
-            
+        if algo_finished and completed_algo_name:
             algo_status = [
                 html.Div(f"{completed_algo_name} — Concluído!", 
                         style={"fontWeight": "700", "marginBottom": "4px", "color": "#8B004B"}),
@@ -564,23 +582,12 @@ def register_callbacks(app):
                 html.Div("Você pode executar um novo algoritmo quando desejar.", 
                         style={"color": "#ff69b4", "fontSize": "10px", "marginTop": "2px"})
             ]
-
-            state["algo_steps"] = []
-            state["algo_index"] = 0
-            state["running_algo"] = None
-            current_step = None
-    
-            bfs_class = "btn-algo"
-            dfs_class = "btn-algo"
-   
-            elements = _clear_all_algo_classes(elements)
         elif current_step:
             algo_name = state.get("running_algo", "Algoritmo")
             visited_str = " → ".join(current_step["visited"])
             queue_str = ", ".join(current_step["queue"]) if current_step["queue"] else "vazia"
             queue_label = "Fila" if algo_name == "BFS" else "Pilha"
             step_idx = state["algo_index"] + 1
-            total_steps = len(state["algo_steps"])
             algo_status = [
                 html.Div(f"{algo_name} — Passo {step_idx}/{total_steps}", style={"fontWeight": "700", "marginBottom": "4px"}),
                 html.Div(f"Atual: {current_step['current']}", style={"color": "#b8860b"}),
@@ -590,7 +597,7 @@ def register_callbacks(app):
         else:
             algo_status = "Nenhum algoritmo rodando."
 
-      
+
         legend_class = "algo-legend visible" if (state["algo_steps"] and not algo_finished and not force_clear_classes) else "algo-legend"
 
         interval_disabled = not state["auto_running"]
@@ -602,5 +609,6 @@ def register_callbacks(app):
             legend_class, interval_disabled,
             download_data,
             bfs_class, dfs_class,
-            direction_class, weight_class
+            direction_class, weight_class,
+            next_step_disabled, run_all_disabled
         )
