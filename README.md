@@ -1,10 +1,10 @@
-# 🎨 Visualizador de Grafos Rosa
+# 🎨 Visualizador de grafos beeem cor de rosa da Stephanny (e do Eduardo)
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
 [![Dash](https://img.shields.io/badge/Dash-2.14.0-pink.svg)](https://dash.plotly.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Um visualizador de grafos interativo e estiloso com foco em algoritmos de busca (BFS e DFS). Desenvolvido com Dash e Cytoscape, este projeto permite criar, editar e visualizar grafos de forma intuitiva, com cores vibrantes e animações passo a passo dos algoritmos.
+Um visualizador de grafos interativo e BEM ROSA com foco em algoritmos de busca (BFS e DFS). Desenvolvido com Dash e Cytoscape, este projeto permite criar, editar e visualizar grafos de forma intuitiva, com cores vibrantes e animações passo a passo dos algoritmos.
 
 ## ✨ Funcionalidades
 
