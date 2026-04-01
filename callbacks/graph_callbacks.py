@@ -23,10 +23,59 @@ def _build_info_box(info, algo_name=None, step=None, total=None):
     return rows
 
 
+def _get_visited_sequence(steps):
+    """Extrai a sequência de vértices visitados na ordem correta"""
+    visited_in_order = []
+    
+    for step in steps:
+        # Verifica se este passo marca a visita de um novo vértice
+        current = step.get("current")
+        if current and current not in visited_in_order:
+            # Se o current ainda não foi adicionado, adiciona agora
+            visited_in_order.append(current)
+    
+    return visited_in_order
+
+
+def _format_sequence_display(sequence, algo_name):
+    """Formata a sequência de visitados para exibição"""
+    if not sequence:
+        return []
+    
+    # Cria uma lista de elementos HTML para exibir a sequência
+    sequence_elements = []
+    for i, node in enumerate(sequence):
+        sequence_elements.append(
+            html.Span(node, style={
+                "display": "inline-block",
+                "backgroundColor": "#ff69b4",
+                "color": "white",
+                "padding": "6px 12px",
+                "margin": "0 4px",
+                "borderRadius": "25px",
+                "fontWeight": "bold",
+                "fontSize": "14px",
+                "boxShadow": "0 2px 4px rgba(0,0,0,0.1)"
+            })
+        )
+        if i < len(sequence) - 1:
+            sequence_elements.append(
+                html.Span("→", style={
+                    "color": "#ff69b4",
+                    "fontWeight": "bold",
+                    "fontSize": "18px",
+                    "margin": "0 4px"
+                })
+            )
+    
+    return sequence_elements
+
+
 def _apply_algo_classes(elements, current_step):
     if not current_step:
         return elements
     current = current_step.get("current")
+    current_neighbor = current_step.get("current_neighbor")
     visited = current_step.get("visited", [])
     queued = current_step.get("queue", [])
 
@@ -36,7 +85,7 @@ def _apply_algo_classes(elements, current_step):
         target = el.get("data", {}).get("target")
 
         if source is None:
-            #
+            # Node
             if el_id == current:
                 el["classes"] = "algo-current"
             elif el_id in visited:
@@ -50,10 +99,11 @@ def _apply_algo_classes(elements, current_step):
                 )
                 el["classes"] = classes
         else:
-         
-            if source == current and target in visited:
-                el["classes"] = "algo-edge-active"
-            elif target == current and source in visited:
+            # Edge - color the edge being explored in this step
+            if current_neighbor and (
+                (source == current and target == current_neighbor) or
+                (target == current and source == current_neighbor)
+            ):
                 el["classes"] = "algo-edge-active"
             else:
                 existing = el.get("classes", "")
@@ -227,6 +277,7 @@ def register_callbacks(app):
 
         show_completion_message = False
         completed_algo_name = None
+        completed_sequence = None
         force_clear_classes = False
         is_completion_step = False
 
@@ -244,6 +295,7 @@ def register_callbacks(app):
                 state["selected_node"] = None
                 state["selected_edge"] = None
                 state["running_algo"] = None
+                state["visited_sequence"] = None
                 force_clear_classes = True
 
    
@@ -254,6 +306,7 @@ def register_callbacks(app):
             state["algo_index"] = 0
             state["auto_running"] = False
             state["running_algo"] = None
+            state["visited_sequence"] = None
             force_clear_classes = True
 
    
@@ -265,6 +318,7 @@ def register_callbacks(app):
             state["algo_index"] = 0
             state["auto_running"] = False
             state["running_algo"] = None
+            state["visited_sequence"] = None
             force_clear_classes = True
 
        
@@ -309,6 +363,7 @@ def register_callbacks(app):
                 state["algo_index"] = 0
                 state["auto_running"] = False
                 state["running_algo"] = None
+                state["visited_sequence"] = None
                 force_clear_classes = True
             elif state["selected_edge"]:
                 edge_id = state["selected_edge"]
@@ -347,8 +402,10 @@ def register_callbacks(app):
                 state["algo_index"] = 0
                 state["running_algo"] = "BFS"
                 state["auto_running"] = False
+                state["visited_sequence"] = None
                 bfs_class = "btn-algo btn-algo-active"
                 dfs_class = "btn-algo"
+                force_clear_classes = False
 
 
         elif "run-dfs" in trigger:
@@ -357,8 +414,10 @@ def register_callbacks(app):
                 state["algo_index"] = 0
                 state["running_algo"] = "DFS"
                 state["auto_running"] = False
+                state["visited_sequence"] = None
                 dfs_class = "btn-algo btn-algo-active"
                 bfs_class = "btn-algo"
+                force_clear_classes = False
 
    
         elif "next-step" in trigger:
@@ -366,7 +425,6 @@ def register_callbacks(app):
                 if state["algo_index"] < len(state["algo_steps"]) - 1:
                     state["algo_index"] += 1
                 elif state["algo_index"] == len(state["algo_steps"]) - 1:
-                   
                     is_completion_step = True
 
       
@@ -380,7 +438,6 @@ def register_callbacks(app):
             if state["algo_index"] < len(state["algo_steps"]) - 1:
                 state["algo_index"] += 1
             elif state["algo_index"] == len(state["algo_steps"]) - 1:
-              
                 is_completion_step = True
                 state["auto_running"] = False
 
@@ -390,6 +447,7 @@ def register_callbacks(app):
             state["algo_index"] = 0
             state["running_algo"] = None
             state["auto_running"] = False
+            state["visited_sequence"] = None
             force_clear_classes = True
 
         graph_service.set_type(direction == "directed", weight == "weighted")
@@ -414,29 +472,25 @@ def register_callbacks(app):
         if force_clear_classes:
             elements = _clear_all_algo_classes(elements)
         elif state["algo_steps"] and total_steps > 0:
-            if state["algo_index"] < total_steps - 1:
-                current_step = state["algo_steps"][state["algo_index"]]
-                elements = _apply_algo_classes(elements, current_step)
-            elif state["algo_index"] == total_steps - 1:
-   
+            if state["algo_index"] < total_steps:
                 current_step = state["algo_steps"][state["algo_index"]]
                 elements = _apply_algo_classes(elements, current_step)
                 
-       
-                if is_completion_step:
+                if state["algo_index"] == total_steps - 1 and is_completion_step:
                     algo_finished = True
                     completed_algo_name = state.get("running_algo", "Algoritmo")
-   
+                    # Extrai a sequência de visitados quando o algoritmo termina
+                    completed_sequence = _get_visited_sequence(state["algo_steps"])
+                    state["visited_sequence"] = completed_sequence
                     state["_pending_completion"] = True
             elif state["algo_index"] >= total_steps:
-                
                 algo_finished = True
                 completed_algo_name = state.get("running_algo", "Algoritmo")
+                completed_sequence = state.get("visited_sequence", [])
                 elements = _clear_all_algo_classes(elements)
 
 
         if algo_finished and state.get("_pending_completion"):
-   
             state["algo_steps"] = []
             state["algo_index"] = 0
             state["running_algo"] = None
@@ -446,14 +500,11 @@ def register_callbacks(app):
             dfs_class = "btn-algo"
             next_step_disabled = False
             run_all_disabled = False
-
             elements = _clear_all_algo_classes(elements)
         elif not state["algo_steps"]:
-       
             next_step_disabled = True
             run_all_disabled = True
         elif state["algo_index"] >= total_steps - 1:
-          
             run_all_disabled = True
             next_step_disabled = False
         else:
@@ -573,14 +624,25 @@ def register_callbacks(app):
             total=total_steps if total_steps else None
         )
 
-        if algo_finished and completed_algo_name:
+        if algo_finished and completed_algo_name and completed_sequence:
+            # Formata a sequência de visitados para exibição
+            sequence_display = _format_sequence_display(completed_sequence, completed_algo_name)
+            
+            # Converte a sequência para string para fácil visualização
+            sequence_string = " → ".join(completed_sequence)
+            
             algo_status = [
                 html.Div(f"{completed_algo_name} — Concluído!", 
-                        style={"fontWeight": "700", "marginBottom": "4px", "color": "#8B004B"}),
-                html.Div("Algoritmo finalizado! Grafo retornado às cores originais.", 
-                        style={"color": "#2e8b57", "fontSize": "11px", "marginTop": "2px"}),
-                html.Div("Você pode executar um novo algoritmo quando desejar.", 
-                        style={"color": "#ff69b4", "fontSize": "10px", "marginTop": "2px"})
+                        style={"fontWeight": "700", "marginBottom": "12px", "color": "#8B004B", "fontSize": "16px"}),
+                html.Div("Sequência de vértices visitados:", 
+                        style={"fontWeight": "600", "marginBottom": "10px", "color": "#ff69b4", "fontSize": "13px"}),
+                html.Div(sequence_display, 
+                        style={"marginBottom": "12px", "padding": "12px", "backgroundColor": "#fff0f6", 
+                               "borderRadius": "10px", "border": "2px solid #ff69b4", "textAlign": "center"}),
+                html.Div(f"Total de vértices visitados: {len(completed_sequence)}", 
+                        style={"color": "#2e8b57", "fontSize": "12px", "marginTop": "8px", "fontWeight": "500"}),
+                html.Div("✓ Algoritmo finalizado! Você pode executar um novo algoritmo quando desejar.", 
+                        style={"color": "#ff69b4", "fontSize": "11px", "marginTop": "8px", "fontStyle": "italic"})
             ]
         elif current_step:
             algo_name = state.get("running_algo", "Algoritmo")
@@ -588,9 +650,19 @@ def register_callbacks(app):
             queue_str = ", ".join(current_step["queue"]) if current_step["queue"] else "vazia"
             queue_label = "Fila" if algo_name == "BFS" else "Pilha"
             step_idx = state["algo_index"] + 1
+            
+            current_neighbor = current_step.get("current_neighbor")
+            edge_info = []
+            if current_neighbor:
+                edge_info.append(
+                    html.Div(f"Explorando aresta: {current_step['current']} → {current_neighbor}", 
+                            style={"color": "#FFD700", "fontSize": "11px", "marginTop": "3px", "fontWeight": "bold"})
+                )
+            
             algo_status = [
                 html.Div(f"{algo_name} — Passo {step_idx}/{total_steps}", style={"fontWeight": "700", "marginBottom": "4px"}),
                 html.Div(f"Atual: {current_step['current']}", style={"color": "#b8860b"}),
+            ] + edge_info + [
                 html.Div(f"Visitados: {visited_str}", style={"color": "#4682b4", "fontSize": "11px", "marginTop": "3px"}),
                 html.Div(f"{queue_label}: {queue_str}", style={"color": "#2e8b57", "fontSize": "11px"}),
             ]

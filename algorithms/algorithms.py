@@ -1,54 +1,111 @@
 def bfs_steps(graph, start):
+
     if start not in graph.nodes:
         return []
+    
     visited = []
     queue = [start]
-    queued = [start]
     steps = []
+
     
     while queue:
-        node = queue.pop(0)
-        if node not in visited:
-            visited.append(node)
+       
+        current = queue.pop(0)
+  
+        steps.append({
+            "current": current,
+            "current_neighbor": None,
+            "visited": list(visited),
+            "queue": list(queue),
+            "type": "BFS",
+            "step_num": len(steps) + 1,
+        })
+        
+   
+        neighbors = sorted(list(graph.neighbors(current)))
+        
+        for neighbor in neighbors:
+     
+            if neighbor not in visited and neighbor not in queue:
+            
+                visited.append(neighbor)
+                queue.append(neighbor)
+                
+              
+                steps.append({
+                    "current": current,
+                    "current_neighbor": neighbor,
+                    "visited": list(visited),
+                    "queue": list(queue),
+                    "type": "BFS",
+                    "step_num": len(steps) + 1,
+                })
     
-            neighbors = sorted(list(graph.neighbors(node)))
-            new_neighbors = [n for n in neighbors if n not in visited and n not in queue]
-            for n in new_neighbors:
-                if n not in queued:
-                    queue.append(n)
-                    queued.append(n)
-            steps.append({
-                "current": node,
-                "visited": list(visited),
-                "queue": list(queue),
-                "type": "BFS",
-                "step_num": len(steps) + 1,
-            })
     return steps
 
 
 def dfs_steps(graph, start):
+    """
+    DFS - Explora um caminho até o fim antes de retroceder
+    Usa PILHA (Stack) - LIFO
+    """
     if start not in graph.nodes:
         return []
+    
     visited = []
     stack = [start]
     steps = []
     
     while stack:
-        node = stack.pop()
-        if node not in visited:
-            visited.append(node)
 
-            neighbors = sorted(list(graph.neighbors(node)))
-
-            new_neighbors = [n for n in reversed(neighbors) if n not in visited]
-            for n in new_neighbors:
-                stack.append(n)
+        current = stack[-1]
+        
+    
+        if current not in visited:
+        
+            visited.append(current)
+       
             steps.append({
-                "current": node,
+                "current": current,
+                "current_neighbor": None,
                 "visited": list(visited),
-                "queue": list(stack),
+                "queue": list(stack),  
                 "type": "DFS",
                 "step_num": len(steps) + 1,
             })
+        
+
+        neighbors = sorted(list(graph.neighbors(current)))
+        found_unvisited = False
+        
+        for neighbor in neighbors:
+            if neighbor not in visited:
+ 
+                steps.append({
+                    "current": current,
+                    "current_neighbor": neighbor,
+                    "visited": list(visited),
+                    "queue": list(stack),
+                    "type": "DFS",
+                    "step_num": len(steps) + 1,
+                })
+       
+                stack.append(neighbor)
+                found_unvisited = True
+                break
+   
+        if not found_unvisited:
+            stack.pop()
+            
+         
+            if stack:
+                steps.append({
+                    "current": stack[-1],
+                    "current_neighbor": None,
+                    "visited": list(visited),
+                    "queue": list(stack),
+                    "type": "DFS",
+                    "step_num": len(steps) + 1,
+                })
+    
     return steps
