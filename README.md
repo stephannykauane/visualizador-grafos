@@ -288,6 +288,3 @@ Desenvolvido por:
 
 ---
 
-# 📄 Licença
-
-Este projeto está sob a licença MIT.
