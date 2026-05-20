@@ -57,6 +57,14 @@ class GraphService:
         self._rebuild_graph()
         return node_id
 
+    def add_node_at_exact(self, x, y, label=None):
+        """Add node at exact position without random jitter (used for import)."""
+        node_id = label if label else self.generate_node_id()
+        if node_id not in self.positions:
+            self.positions[node_id] = {"x": x, "y": y}
+        self._rebuild_graph()
+        return node_id
+
     def add_edge(self, source, target, weight=1):
         if source in self.positions and target in self.positions:
             if self.directed:
@@ -69,7 +77,7 @@ class GraphService:
             if not exists:
                 try:
                     w = int(float(weight)) if weight not in [None, ""] else 1
-                except:
+                except Exception:
                     w = 1
                 self.edges_data.append((source, target, w))
                 self._rebuild_graph()

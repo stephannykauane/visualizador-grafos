@@ -10,4 +10,9 @@ state = {
     "algo_index": 0,
     "running_algo": None,
     "auto_running": False,
+    "visited_sequence": None,
+    "maxflow_source": None,
+    "maxflow_sink": None,
+    "_pending_completion": False,
+    "_mf_validation_error": False,
 }

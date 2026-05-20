@@ -1,20 +1,19 @@
 from dash import html, dcc
 
+
 def create_topbar():
     return html.Div([
         html.Div([
-            html.Span("<3", style={"fontSize": "20px"}),
-            "Visualizador de grafos rosa"
+            html.Span("♡", className="topbar-logo-heart"),
+            "Visualizador de Grafos Rosa"
         ], className="topbar-logo"),
 
         html.Div([
             dcc.Upload(
-                html.Button("Upload", className="button",
-                            style={"width": "auto", "padding": "7px 16px", "marginBottom": 0}),
+                html.Button("↑ Upload", className="btn-topbar"),
                 id="upload"
             ),
-            html.Button("Download", id="download-btn", className="button",
-                        style={"width": "auto", "padding": "7px 16px", "marginBottom": 0}),
+            html.Button("↓ Download", id="download-btn", className="btn-topbar"),
             dcc.Download(id="download-file"),
         ], className="topbar-actions")
     ], className="topbar")
